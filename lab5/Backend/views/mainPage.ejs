@@ -1,0 +1,175 @@
+<% include common/header.ejs %>
+<div class="main-container container-fluid">
+	<div class="row order-page-panel">
+		<div>
+			<div class="contact-form-1">
+				<div class="form-description-1">
+					1. Контактні дані
+				</div>
+				<div class="row">
+					<div class="col-md-7">
+						<form class="form-horizontal">
+							<div id='inputNameContainer' class="form-group name-group">
+								<label class="col-sm-2 control-label">Ім’я</label>
+								<div class="col-sm-10">
+									<input class="form-control" type="text" id="inputName" placeholder="Ім’я Фамілія" oninput="validateName()">
+								</div>
+								<span class="name-help-block" style="display: none;">
+								Введіть тільки власне ім’я, без цифр
+								</span>
+							</div>
+							<div class="form-group phone-group" id="inputPhoneContainer">
+								<label class="col-sm-2 control-label">Телефон</label>
+								<div class="col-sm-10">
+									<input class="form-control" type="text" id="inputPhone" placeholder="+380994010999" oninput="validatePhone()">
+								</div>
+								<span class="phone-help-block" style="display: none;">
+								Введіть номер телефону у форматі +380 або почніть з 0
+								</span>
+							</div>
+							<div class="form-group address-group">
+								<label class="col-sm-2 control-label">Адреса</label>
+								<div class="col-sm-10">
+									<input class="form-control" type="text" id="inputAddress" placeholder="Київ, вул. Спаська, 2" oninput="processAddressInput()">
+								</div>
+								<span class="address-help-block" style="display: none;">
+								Введіть адресу доставки піци
+								</span>
+							</div>
+						</form>
+					</div>
+					<div class="col-md-5 order-summary">
+						<div class=" bs-callout bs-callout-warning">
+							<h4>Інформація про замовлення</h4>
+							<p class="order-summery-time"><b>Приблизний час доставки</b>: <span id="deliveryTime">невiдомий</span> </p>
+							<p class="order-summery-adress"><b>Адреса доставки:</b> <span id="deliveryAddress"></span></p> 
+						</div>
+					</div>
+				</div>
+				<div class="row">
+				<div class="form-group next-step-wrap">
+					<div class="next-step-width">
+						<button type="button" class="btn btn-warning btn-block next-step-button" onclick="location.href = 'http://localhost:5050/api/get-liq-payment/';">
+						Далі
+						<i class="glyphicon glyphicon-chevron-right icon-white">
+						</i>
+						</button>
+					</div>
+				</div>
+			</div>
+			</div>
+			<div>
+				<div id="map"></div>
+				<script>
+				
+				  function initMap() {
+					
+					var gmarker = null;
+					var geocoder = new google.maps.Geocoder();
+
+					var uluru = {lat: -25.363, lng: 131.044};
+					var map = new google.maps.Map(document.getElementById('map'), {
+					  zoom: 4,
+					  center: uluru
+					});
+					var marker = new google.maps.Marker({
+					  position: uluru,
+					  map: map
+					});
+					
+					var directionsService = new google.maps.DirectionsService,
+						directionsDisplay = new google.maps.DirectionsRenderer({
+						  map: map
+						});
+					
+					google.maps.event.addListener(map, 'click', function(event) {
+					   placeMarker(event.latLng);
+					   
+					   geocoder.geocode({
+							'latLng': event.latLng
+						  }, function(results, status) {
+							if (status == google.maps.GeocoderStatus.OK) {
+							  if (results[0]) {
+								$("#deliveryAddress").text(results[0].formatted_address);
+								$("#inputAddress").val(results[0].formatted_address);
+								//alert(results[0].formatted_address);
+							  }
+							}
+						  });
+					   
+						calculateAndDisplayRoute(directionsService, directionsDisplay, marker.position, gmarker.position);
+					   
+					});
+					
+					function calculateAndDisplayRoute(directionsService, directionsDisplay, pointA, pointB) {
+						  directionsService.route({
+							origin: pointA,
+							destination: pointB,
+							travelMode: google.maps.TravelMode.DRIVING
+						  }, function(response, status) {
+							if (status == google.maps.DirectionsStatus.OK) {
+							  directionsDisplay.setDirections(response);
+							  //alert(response.routes[0].legs[0].duration.text);
+							  $("#deliveryTime").text(response.routes[0].legs[0].duration.text);
+							} else {
+							  window.alert('Directions request failed due to ' + status);
+							}
+						  });
+						}
+					
+					function placeMarker(location) {
+						if(gmarker){
+							gmarker.setMap(null);
+						}
+						gmarker = new google.maps.Marker({
+							position: location, 
+							map: map
+						});
+						
+					}
+					
+					
+				  }
+				</script>
+				<script async defer
+				src="https://maps.googleapis.com/maps/api/js?key=AIzaSyA9R9vNlsVfX8CO4w0_alSl3kSXNGZHnmY&callback=initMap">
+				</script>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	function validateName(input){
+		var value = $("#inputName")[0].value;
+		var r = /^[а-яА-Я]+$/;
+		if(r.test(value)){
+			$("#inputNameContainer").removeClass("has-error").addClass("has-success");
+			$(".name-help-block").css("display", "none");
+		}else{
+			$("#inputNameContainer").removeClass("has-success").addClass("has-error");
+			$(".name-help-block").css("display", "block");
+		}
+	}
+	
+	function validatePhone(input){
+		var value = $("#inputPhone")[0].value;
+		var r = /^(\+38)?[0-9]{10}$/
+		if(r.test(value)){
+			$("#inputPhoneContainer").removeClass("has-error").addClass("has-success");
+			$(".phone-help-block").css("display", "none");
+		}else{
+			$("#inputPhoneContainer").removeClass("has-success").addClass("has-error");
+			$(".phone-help-block").css("display", "block");
+		}
+	}
+	
+	function processAddressInput(){
+		var value = $("#inputAddress")[0].value;
+		$("#deliveryAddress").text(value);
+	}
+	
+	
+</script>
+
+<% include common/footer.ejs %>

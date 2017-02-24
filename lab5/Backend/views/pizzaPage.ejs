@@ -1,0 +1,275 @@
+<div class="container-fluid">
+	<% include common/header.ejs %>
+	<div class="main-container  container-fluid">
+		<div class="row">
+			<div class="left-panel">
+				<div class="page-title">
+					<h2>
+						<span class="count-tile">Усі піци</span>
+						<span class="badge orange pizza-count">8</span>
+					</h2>
+				</div>
+				<div class="all-pizza-type-wrap">
+						<ul class="nav nav-pills all-pizza-type">
+							<li role="presentation" class="pizza-filter-button active" id="filter-button-all-pizza">
+								<a href="#">
+									Усі
+								</a>
+							</li>
+							<li role="presentation" class="pizza-filter-button" id="filter-button-meat">
+								<a href="#">
+									М'ясні
+								</a>
+							</li>
+							<li role="presentation" class="pizza-filter-button" id="filter-button-pineapples">
+								<a href="#">
+									З ананасами
+								</a>
+							</li>
+							<li role="presentation" class="pizza-filter-button" id="filter-button-mushrooms">
+								<a href="#">
+									З грибами
+								</a>
+							</li>
+							<li role="presentation" class="pizza-filter-button" id="filter-button-ocean">
+								<a href="#">
+									З морепродуктами
+								</a>
+							</li>
+							<li role="presentation" class="pizza-filter-button" id="filter-button-tomato">
+								<a href="#">
+									Вега
+								</a>
+							</li>
+						</ul>
+				</div>
+				
+				<div class="row pizza_list" id="pizzaList">
+				
+				</div>	
+				
+			</div>
+			
+			<!--Правая панель-->
+			<div class="right-panel">
+				<div class="r1">
+					<span class="order-list-title">
+						Замовлення
+						<span class="badge orange orders-count-span">0</span>
+					</span>			
+					<span class="clear-order-wrap clear-order">
+						Очистити замовлення
+					</span>					
+				</div>
+				
+				<div id='pizzaCard'>
+					Пусто в холодильнику? Замовте піцу!
+				</div>
+
+				<div class="order-state r3">
+							<span class="sum-title" style="display: inline;">
+								Сума замовлення
+							</span>
+							<span class="sum-number" style="display: block;">0 грн</span>
+					<div class="do-order-button">
+						
+						<button type="button" disabled="true" class="btn btn-warning btn-lg btn-block button-order" onclick="location.href = 'http://localhost:5050/';">
+							Замовити
+						</button>
+						
+					</div>
+
+				</div>
+			</div>
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+		<div>
+	</div>
+</div>
+
+
+
+
+<% include common/footer.ejs %>
+
+
+<script>
+
+	$(function() {
+		
+		var pizzaList = [], pizzaCard = [];
+		
+		var API_URL = "http://localhost:5050";
+		
+		function getPizzaList(event) {
+			
+			var sender = event ? event.currentTarget : null;
+			var filter = (event && event.data) ? event.data.filter : null;
+			var title = (event && event.data) ? event.data.title : "";
+			
+			if(sender){
+				$(".pizza-filter-button.active").removeClass("active");
+				$("#"+sender.id).addClass("active");
+				$("span.count-tile").text(title);
+			}
+			
+			$.ajax({
+			url: API_URL + "/api/get-pizza-list/",
+			type: 'GET',
+			data: {filter: filter},
+			success: function(data){
+				$("#pizzaList").html(data.html);
+				$("span.pizza-count").text(data.pizzaList.count);
+				$(".buy-button-small").click(buyPizzaClick);
+				$(".buy-button-big").click(buyPizzaClick);
+				pizzaList = data.pizzaList;
+			},
+			error: function() {
+				alert(new Error("Ajax Failed"));
+			}
+		});
+			
+			
+			
+		}
+		
+		
+		function buyPizzaClick(event){
+			var idString = event.currentTarget.id;
+			var small = idString.startsWith("s");
+			var id = idString.substring(1);
+			var pizzaCardItem = pizzaCard.find(function(item){return item.id == id && item.small == small});
+			if(pizzaCardItem){
+				pizzaCardItem.count++;
+			}else{
+				var pizzaItem = pizzaList.find(function(item){return item.id == id});
+				pizzaCard.push({
+									id: pizzaItem.id,
+									count: 1,
+									small: small,
+									prefix: small ? "Мала" : "Велика",
+									sizeData: small ? pizzaItem.small_size : pizzaItem.big_size,
+									icon: pizzaItem.icon,
+									title: pizzaItem.title																	
+								});
+			}
+			
+			$("span.orders-count-span").text(pizzaCard.length);
+			
+			renderPizzaCard();
+		}
+		
+		function renderPizzaCard(){
+			$.ajax({
+				url: API_URL + "/api/get-pizza-card/",
+				type: 'GET',
+				data: {pizzaCard: pizzaCard},
+				success: function(data){
+					$("#pizzaCard").html(data.html);
+					$(".minus").click(pizzaCountDec);
+					$(".plus").click(pizzaCountInc);
+					$(".count-clear").click(pizzaCountClear);
+					var orderSum = pizzaCard.reduce( function(a, b){
+								return a + b.sizeData.price * b.count;
+							}, 0);
+					$("span.sum-number").text(orderSum + ' грн.');
+					$('.button-order').prop('disabled', orderSum <= 0);
+				},
+				error: function() {
+					alert(new Error("Ajax Failed"));
+				}
+			});
+		}
+		
+		function pizzaCountDec(event){
+			var id = event.currentTarget.id;
+			var pizzaCardItem = pizzaCard.find(function(item){return id == 'minus'+item.id+item.prefix;});
+			pizzaCardItem.count--;
+			if(pizzaCardItem.count <= 0) {
+				pizzaCard = pizzaCard.filter(function(item) {
+					return id != 'minus'+item.id+item.prefix;
+				});
+			}
+			$("span.orders-count-span").text(pizzaCard.length);
+			renderPizzaCard();
+		}
+		
+		function pizzaCountInc(event){
+			var id = event.currentTarget.id;
+			var pizzaCardItem = pizzaCard.find(function(item){return id == 'plus'+item.id+item.prefix;});
+			pizzaCardItem.count++;
+			renderPizzaCard();
+		}
+		
+		function pizzaCountClear(event){
+			var id = event.currentTarget.id;
+		
+			pizzaCard = pizzaCard.filter(function(item) {
+				return id != 'remove'+item.id+item.prefix;
+			});
+			
+			$("span.orders-count-span").text(pizzaCard.length);
+			renderPizzaCard();
+		}
+		
+		function setOnClickEvents(){
+			$("#filter-button-all-pizza").click({title: 'Усі піци'}, getPizzaList);
+			$("#filter-button-meat").click({filter: 'М’ясна піца', title: 'М’ясні піци'}, getPizzaList);
+			$("#filter-button-pineapples").click({filter: 'pineapple', title: 'Піци з ананасом'}, getPizzaList);
+			$("#filter-button-mushrooms").click({filter: 'mushroom', title: 'Піци з грибами'}, getPizzaList);
+			$("#filter-button-ocean").click({filter: 'Морська піца', title: 'Піци з морепродуктами'}, getPizzaList);
+			$("#filter-button-tomato").click({filter: 'Вега піца', title: 'Вега піци'}, getPizzaList);
+			
+		}
+		
+		
+		getPizzaList();
+		setOnClickEvents();
+	});
+
+	/*function GetPizzaList(){
+		
+
+		function getPizzaList() {
+			$.ajax({
+				url: API_URL + "/api/get-pizza-list/",
+				type: 'GET',
+				success: function(data){
+					data.forEach(function(item)){
+						alert("ololo");
+						$("#pizzaList").empty();
+						var pizzaItem = ejs.compile(fs.readFileSync('./Frontend/templates/PizzaMenu_OneItem.ejs', "utf8"));
+						var html = pizzaItem({pizza: pizza});
+						$("#pizzaList").append(html);
+					}
+				},
+				error: function() {
+					alert(new Error("Ajax Failed"));
+				}
+			})
+		}
+
+		function backendPost(url, data, callback) {
+			$.ajax({
+				url: API_URL + url,
+				type: 'POST',
+				contentType : 'application/json',
+				data: JSON.stringify(data),
+				success: function(data){
+					callback(null, data);
+				},
+				error: function() {
+					callback(new Error("Ajax Failed"));
+				}
+			})
+		}*/
+	//}
+</script>
